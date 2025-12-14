@@ -2,6 +2,7 @@
 
 A multimodal AI system that enables searching inside videos using **text, image, or audio queries**. User can upload the video and also can upload there query(either text, audio, image) our engine will help the user to search the query inside the uploaded video.
 Example :- uploaded a video having mountains somewhere or teacher explaining ohm's law, user can ask - "mountains" pr "teacher explaining ohms" , our search engine will search that part in the video and return the timestamp containing that portion.
+NOTE :- app.py is actually a google collab notebook downloaded in .py form
 
 ---
 
