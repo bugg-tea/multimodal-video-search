@@ -1,0 +1,13 @@
+__pycache__/
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.wav
+*.mp3
+*.jpg
+*.png
+*.pt
+*.bin
+temp_*/
+.env

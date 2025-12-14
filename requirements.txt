@@ -1,0 +1,16 @@
+gradio
+moviepy
+opencv-python-headless
+pillow
+tqdm
+openai-whisper
+transformers
+sentencepiece
+sentence-transformers
+faiss-cpu
+torch
+torchvision
+torchaudio
+numpy
+ffmpeg-python
+accelerate
