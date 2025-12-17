@@ -23,9 +23,6 @@ from transformers import BlipProcessor, BlipForConditionalGeneration
 from sentence_transformers import SentenceTransformer
 import faiss
 
-# ------------------------------
-# Folders
-# ------------------------------
 ROOT = "/content"
 VIDEO_FOLDER = os.path.join(ROOT, "drive", "MyDrive", "videos")
 CHUNK_FOLDER = os.path.join(ROOT, "chunks")
@@ -37,9 +34,6 @@ INDEX_FOLDER = os.path.join(ROOT, "indexes")
 for p in [CHUNK_FOLDER, FRAME_FOLDER, TRANSCRIPT_FOLDER, EMBEDDING_FOLDER, INDEX_FOLDER]:
     os.makedirs(p, exist_ok=True)
 
-# ------------------------------
-# Parameters
-# ------------------------------
 CHUNK_DURATION = 5   # seconds per chunk
 HOP = 3              # overlap
 NUM_FRAMES = 12
@@ -52,7 +46,6 @@ VISUAL_SIM_THRESHOLD = 0.28
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print("Device:", device)
 
-# File paths
 CHUNK_META_FILE = os.path.join(CHUNK_FOLDER, "chunk_metadata.json")
 EMB_AUDIO_FILE = os.path.join(EMBEDDING_FOLDER, "emb_audio.json")
 EMB_VISUAL_FILE = os.path.join(EMBEDDING_FOLDER, "emb_visual.json")
@@ -85,7 +78,7 @@ def load_json(path):
 chunks_meta = load_json(CHUNK_META_FILE) or []
 
 video_list = sorted([f for f in os.listdir(VIDEO_FOLDER) if f.lower().endswith((".mp4",".mkv",".avi",".mov"))])
-video_list = video_list[:5]  # optional for testing
+video_list = video_list[:5]  
 
 existing_video_ids = set([c["video_id"] for c in chunks_meta])
 
@@ -161,16 +154,13 @@ for chunk in tqdm(chunks_meta, desc="Extracting frames"):
 print("Keyframes extracted.")
 
 print("Loading models... this may take a while")
-# Whisper for audio transcription
 import whisper
 whisper_model = whisper.load_model("medium")
 
-# BLIP for visual captions
 from transformers import BlipProcessor, BlipForConditionalGeneration
 blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
 blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to(device)
 
-# SentenceTransformer for embeddings
 from sentence_transformers import SentenceTransformer
 text_model = SentenceTransformer('all-mpnet-base-v2', device=device)
 print("Models loaded.")
@@ -238,7 +228,6 @@ emb_visual = load_json(EMB_VISUAL_FILE) or []
 existing_audio = set(e["chunk_file"] for e in emb_audio)
 existing_visual = set(e["frame_path"] for e in emb_visual)
 
-# Audio embeddings
 for chunk in tqdm(chunks_meta, desc="Embedding audio"):
     if chunk["chunk_file"] in existing_audio:
         continue
@@ -257,7 +246,6 @@ for chunk in tqdm(chunks_meta, desc="Embedding audio"):
     existing_audio.add(chunk["chunk_file"])
     save_json(EMB_AUDIO_FILE, emb_audio)
 
-# Visual embeddings
 for chunk in tqdm(chunks_meta, desc="Embedding visual"):
     for vc in chunk.get("visual_captions", []):
         fp = vc["frame_path"]
@@ -280,7 +268,6 @@ for chunk in tqdm(chunks_meta, desc="Embedding visual"):
         existing_visual.add(fp)
         save_json(EMB_VISUAL_FILE, emb_visual)
 
-# Audio index
 if os.path.exists(AUDIO_INDEX_FILE) and os.path.exists(AUDIO_META_FILE):
     audio_index = faiss.read_index(AUDIO_INDEX_FILE)
     audio_meta = load_json(AUDIO_META_FILE)
@@ -295,7 +282,6 @@ else:
         audio_meta = emb_audio.copy()
         save_json(AUDIO_META_FILE, audio_meta)
 
-# Visual index
 if os.path.exists(VISUAL_INDEX_FILE) and os.path.exists(VISUAL_META_FILE):
     visual_index = faiss.read_index(VISUAL_INDEX_FILE)
     visual_meta = load_json(VISUAL_META_FILE)
@@ -321,8 +307,7 @@ def search_multimodal(query, top_k=TOP_K):
 
     res_audio,res_visual=[],[]
 
-    # audio
-    if audio_index and audio_index.ntotal>0:
+        if audio_index and audio_index.ntotal>0:
         k = min(top_k, audio_index.ntotal)
         D,I = audio_index.search(q_emb.reshape(1,-1), k)
         for score, idx in zip(D[0], I[0]):
@@ -330,7 +315,6 @@ def search_multimodal(query, top_k=TOP_K):
                 m = audio_meta[idx]
                 res_audio.append({**m,"score":float(score)})
 
-    # visual
     if visual_index and visual_index.ntotal>0:
         k = min(top_k*3, visual_index.ntotal)
         D,I = visual_index.search(q_emb.reshape(1,-1), k)
@@ -339,7 +323,6 @@ def search_multimodal(query, top_k=TOP_K):
                 m = visual_meta[idx]
                 res_visual.append({**m,"score":float(score)})
 
-    # pick best
     best_audio = max(res_audio, key=lambda x:x["score"]) if res_audio else None
     best_visual = max(res_visual, key=lambda x:x["score"]) if res_visual else None
 
@@ -366,10 +349,6 @@ def search_multimodal(query, top_k=TOP_K):
         "timestamp":winner.get("timestamp") if source=="visual" else None,
         "explanation":explanation
     }
-
-# ===============================
-# MULTIMODAL QUERY HANDLERS
-# ===============================
 
 def process_text_query(query_text):
     """
@@ -431,9 +410,6 @@ def process_audio_query(audio_path):
 
     return result
 
-# ===============================
-# UNIFIED MULTIMODAL ROUTER
-# ===============================
 
 def multimodal_query(
     text_query=None,
@@ -457,9 +433,6 @@ def multimodal_query(
         "reason": "No valid query input provided"
     }
 
-# ===============================
-# TEST MULTIMODAL QUERIES
-# ===============================
 
 print("\n==============================")
 print("🔎 MULTIMODAL SEARCH TESTING")
@@ -482,7 +455,6 @@ print(res)
 
 import gradio as gr
 
-# Function to process inputs based on user selection
 def search_video(selected_inputs, text_query, image_file, audio_file):
     text_input = text_query if "Text" in selected_inputs else None
     image_input = image_file.name if "Image" in selected_inputs and image_file is not None else None
@@ -518,7 +490,6 @@ def search_video(selected_inputs, text_query, image_file, audio_file):
 
     return output_text
 
-# Dynamically update visibility of inputs
 def update_inputs(selected_inputs):
     return (
         gr.update(visible="Text" in selected_inputs),
@@ -526,7 +497,6 @@ def update_inputs(selected_inputs):
         gr.update(visible="Audio" in selected_inputs)
     )
 
-# Gradio Interface
 with gr.Blocks() as demo:
     gr.Markdown("## 🎥 Multimodal Video Search Engine")
     gr.Markdown("Select which input(s) you want to provide: Text, Image, Audio")
@@ -541,8 +511,7 @@ with gr.Blocks() as demo:
     audio_input = gr.File(label="Upload Audio", file_types=[".wav", ".mp3", ".m4a"])
     output = gr.Markdown(label="Search Results")
 
-    # Dynamically show/hide inputs
-    input_selector.change(
+        input_selector.change(
         fn=update_inputs,
         inputs=input_selector,
         outputs=[text_input, image_input, audio_input]
